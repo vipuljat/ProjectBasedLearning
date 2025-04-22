@@ -1,11 +1,27 @@
 from fastapi import FastAPI
-from routes import suggest, details
+from routes import suggest, details, overview , modules, moduleDetails , resources
+
 
 app = FastAPI()
 
-# Include API routes
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["http://localhost:5173"] for more security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Include API routes with proper prefixes
 app.include_router(suggest.router)
 app.include_router(details.router)
+app.include_router(overview.router)
+app.include_router(modules.router)
+app.include_router(moduleDetails.router)
+app.include_router(resources.router)
 
 @app.get("/")
 async def root():
