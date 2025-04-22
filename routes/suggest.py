@@ -5,7 +5,7 @@ from typing import List
 
 router = APIRouter()
 
-@router.post("/suggest-projects", response_model=List[ProjectSuggestion])
+@router.post("/suggestProjects", response_model=List[ProjectSuggestion])
 async def suggest_projects(params: StudentParams):
     """Returns project suggestions based on user input."""
     try:
