@@ -1,0 +1,44 @@
+[
+    {
+        "type": "documentation",
+        "name": "Complete Guide to Modern Web Development",
+        "url": "https://example.com/modern-web-dev",
+        "description": "Master the fundamentals of web development with this comprehensive guide covering HTML, CSS, and JavaScript.",
+        "duration": "45 min read"
+    },
+    {
+        "type": "video",
+        "name": "Building Scalable Applications",
+        "url": "https://example.com/scalable-apps",
+        "description": "Learn best practices for creating maintainable and scalable web applications using modern frameworks.",
+        "duration": "1.5 hr watch"
+    },
+    {
+        "type": "blog",
+        "name": "Advanced State Management Patterns",
+        "url": "https://example.com/state-management",
+        "description": "Deep dive into state management solutions and patterns for complex applications.",
+        "duration": "20 min read"
+    },
+    {
+        "type": "documentation",
+        "name": "Performance Optimization Techniques",
+        "url": "https://example.com/performance-tips",
+        "description": "Discover practical techniques to improve your application's performance and user experience.",
+        "duration": "35 min read"
+    },
+    {
+        "type": "course",
+        "name": "Modern CSS Layout Mastery",
+        "url": "https://example.com/css-layout",
+        "description": "Master CSS Grid, Flexbox, and modern layout techniques for responsive web design.",
+        "duration": "2 hr course"
+    },
+    {
+        "type": "blog",
+        "name": "API Design Best Practices",
+        "url": "https://example.com/api-best-practices",
+        "description": "Learn how to design and implement robust and scalable APIs for your applications.",
+        "duration": "25 min read"
+    }
+]
