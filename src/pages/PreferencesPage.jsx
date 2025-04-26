@@ -110,6 +110,7 @@ export default function PreferencesPage() {
                                             <option value="" disabled>Select type</option>
                                             <option value="Frontend">Frontend</option>
                                             <option value="Backend">Backend</option>
+                                            <option value="Backend">Full Stack</option>
                                             <option value="Mobile">Mobile App</option>
                                             <option value="Data">Data Science</option>
                                         </select>

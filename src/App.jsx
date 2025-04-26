@@ -12,6 +12,8 @@ import ProjectOverview from "./pages/ProjectOverview";
 import ModulesPage from "./pages/ModulesPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import ModuleDetailPage from "./pages/moduleDetails";
+import YourProjects from "./pages/yourProjects";
+import ModuleResourcePage from "./pages/moduleResoucePage";
 
 
 const DiagramVisualizer = () => {
@@ -63,10 +65,12 @@ const App = () => {
                 <Route path="/DiagramVisualizer" element={<DiagramVisualizer />} />
                 <Route path="/" element={<PreferencesPage />} />
                 <Route path="/projectRecommendations" element={<ProjectRecommendations />} />
+                <Route path="/projects" element={<YourProjects />} />
                 <Route path="/projectOverview/:title" element={<ProjectOverview />} />
                 <Route path="/modules/:title" element={<ModulesPage />} />
                 <Route path="/moduleDetails" element={<ModuleDetailPage />} />
                 <Route path="/resourcesPage" element={<ResourcesPage />} />
+                <Route path="/moduleResoucePage" element={<ModuleResourcePage />} />
             </Routes>
         </Router>
     );

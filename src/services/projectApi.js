@@ -39,6 +39,10 @@ export const projectApi = createApi({
             }),
         }),
 
+        getProjects: builder.query({
+            query: () => '/projects',
+        }),
+
     }),
 });
 
@@ -48,6 +52,7 @@ export const {
     useFetchModulesQuery,
     useGetModuleDetailsMutation,
     useGetResourcesMutation,
+    useGetProjectsQuery
 } = projectApi;
 
 

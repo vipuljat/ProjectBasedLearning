@@ -19,6 +19,7 @@ export default function Header() {
                         <Home size={20} />
                         <span className="text-sm font-medium">Home</span>
                     </Link>
+                    {/* Update this link to navigate to your projects page */}
                     <Link to="/projects" className="flex items-center gap-2 hover:text-[#4AB8FF] transition-colors duration-300 text-[#F2F2F2]">
                         <LayoutGrid size={20} />
                         <span className="text-sm font-medium">Projects</span>

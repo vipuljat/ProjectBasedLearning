@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../styles/ModuleDetail.css";
 import { ChevronLeft, ExternalLink, BookOpen, Code, FileText, CheckCircle } from "lucide-react";
@@ -13,6 +13,11 @@ export default function ModuleDetailPage() {
     const location = useLocation();
     const { module } = location.state || {};
     console.log(module);
+
+    // Automatically load the first step with animation on page load
+    useEffect(() => {
+        setAnimateIn(true);
+    }, []);
 
     if (!module) {
         return (
@@ -117,7 +122,6 @@ export default function ModuleDetailPage() {
                                                 {getStepIcon(index)}
                                             </div>
                                         </div>
-                                        <p className="text-sm text-[#F2F2F2]/60 line-clamp-2">{step.description || "No description available"}</p>
                                         <div className="w-full bg-[#2D2E34] h-1 mt-2 rounded">
                                             <div
                                                 className="bg-[#0095FF] h-1 rounded"
@@ -133,8 +137,7 @@ export default function ModuleDetailPage() {
                     {/* Step content */}
                     <div className="lg:w-3/4">
                         <div
-                            className={`bg-[#141824] rounded-xl p-8 transition-all duration-300 ${animateIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-                                }`}
+                            className={`bg-[#141824] rounded-xl p-8 transition-all duration-300 ${animateIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
                         >
                             <div className="flex items-center mb-6">
                                 <div className="bg-[#0095FF]/20 text-[#0095FF] px-4 py-2 rounded-full text-sm font-medium">

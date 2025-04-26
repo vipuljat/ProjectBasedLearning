@@ -1,0 +1,21 @@
+/* Add this to your CSS file */
+.bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+/* For the code background in the editor's pick */
+.code-bg {
+    background-image: url("/code-bg.jpg");
+    background-size: cover;
+    background-position: center;
+}
+
+/* Optional: Add this if you want to ensure the page takes up at least the full viewport height */
+.min-h-screen {
+    min-height: 100vh;
+}
+
+/* Add blur effect for background elements */
+.filter.blur-3xl {
+    filter: blur(64px);
+}

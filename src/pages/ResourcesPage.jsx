@@ -19,7 +19,8 @@ const ResourcesPage = () => {
     const [isLoaded, setIsLoaded] = useState(false);
     const filters = ["All", "Documentation", "Video", "Blog", "Tool", "Course"];
     const location = useLocation();
-    const resources = location.state?.resources || [];
+    const resources = location.state?.resources?.resources || [];
+    console.log("res", resources);
 
     // Filter resources based on active filter and search query
     const filteredResources = resources
@@ -78,11 +79,10 @@ const ResourcesPage = () => {
                                 key={filter}
                                 onClick={() => setActiveFilter(filter)}
                                 className={`px-5 py-2.5 rounded-full transition-all duration-300 ${activeFilter === filter
-                                        ? filter === "All"
-                                            ? "bg-[#0095FF] text-white shadow-lg shadow-[#0095FF]/20"
-                                            : `${tagColors[filter]} text-white shadow-lg shadow-${tagColors[filter]}/20`
-                                        : "bg-[#141824] text-[#F2F2F2] hover:bg-[#191C27]"
-                                    }`}
+                                    ? filter === "All"
+                                        ? "bg-[#0095FF] text-white shadow-lg shadow-[#0095FF]/20"
+                                        : `${tagColors[filter]} text-white shadow-lg shadow-${tagColors[filter]}/20`
+                                    : "bg-[#141824] text-[#F2F2F2] hover:bg-[#191C27]"}`}
                             >
                                 {filter}
                             </button>
@@ -120,15 +120,28 @@ const ResourcesPage = () => {
                                     </div>
                                 )}
 
-                                <a
-                                    href={editorPick.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center px-6 py-3 bg-[#191C27] hover:bg-[#2D2E34] text-[#F2F2F2] rounded-lg font-medium transition-all duration-300 shadow-lg shadow-[#0095FF]/20"
-                                >
-                                    Watch Now
-                                    <ExternalLink className="ml-2 h-4 w-4" />
-                                </a>
+                                {editorPick.type === "video" && editorPick.url.includes("youtube.com") ? (
+                                    <div className="aspect-w-16 aspect-h-9 mt-4">
+                                        <iframe
+                                            className="rounded-lg w-full h-full"
+                                            src={editorPick.url.replace("watch?v=", "embed/")}
+                                            title={editorPick.name}
+                                            frameBorder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        ></iframe>
+                                    </div>
+                                ) : (
+                                    <a
+                                        href={editorPick.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center px-6 py-3 bg-[#191C27] hover:bg-[#2D2E34] text-[#F2F2F2] rounded-lg font-medium transition-all duration-300 shadow-lg shadow-[#0095FF]/20"
+                                    >
+                                        View Resource
+                                        <ExternalLink className="ml-2 h-4 w-4" />
+                                    </a>
+                                )}
                             </div>
 
                             <div className="hidden md:block w-64 h-64 bg-gradient-to-br from-[#3B22CE] to-[#0095FF] rounded-2xl opacity-20"></div>
@@ -146,14 +159,14 @@ const ResourcesPage = () => {
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <span
-                                    className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${tagColors[res.type] || "bg-[#141824]"} text-[#F2F2F2]`}
+                                    className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${tagColors[res.type] || "bg-[#141824]"} text-[#F2F2F2]`}
                                 >
                                     {res.type}
                                 </span>
-                                {res.duration && (
+                                {res.estimated_time && (
                                     <div className="flex items-center text-[#F2F2F2]/60 text-xs">
                                         <Clock className="h-3 w-3 mr-1" />
-                                        {res.duration}
+                                        {res.estimated_time} min
                                     </div>
                                 )}
                             </div>
