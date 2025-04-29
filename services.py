@@ -1,5 +1,5 @@
 from google import genai
-from models import Module, ModuleDetails, Overview, ProjectModule, StudentParams, ProjectSuggestion, ProjectDetails, TimeEstimation
+from models import DiagramDetails, Module, ModuleDetails, Overview, ProjectModule, StudentParams, ProjectSuggestion, ProjectDetails, TimeEstimation
 from config import GEMINI_API_KEY, GEMINI_MODEL
 from typing import List, Dict
 import json , re
@@ -16,27 +16,34 @@ def generate_project_suggestions(params: StudentParams) -> List[ProjectSuggestio
     
     prompt = (
         f"Suggest exactly 3 innovative and well-defined coding project ideas for a {params.skill_level} developer "
-        f"interested in a {params.project_type} project using {params.technology}."
+        f"interested in a {params.project_type} project using {params.technology}.\n"
     )
     
     if params.duration:
-        prompt += f" The project should be suitable for a {params.duration}-term duration."
+        prompt += f"The project should be suitable for a {params.duration}-term duration.\n"
     if params.domain:
-        prompt += f" Focus on the {params.domain} domain and ensure real-world applicability."
-    
+        prompt += f"Focus on the {params.domain} domain and ensure real-world applicability.\n"
+    if params.time_commitment:
+        prompt += (
+            f"The user has a time commitment of {params.time_commitment}. "
+            f"Ensure that each project is scoped to be realistically completed within this daily time commitment. "
+            f"For example, if the time commitment is 2 hours/day, the project should be designed with a scope that can be managed within approximately 2 hours of work per day.\n"
+        )
+
     prompt += (
-        " Each project should include: "
-        "1. A **clear and concise title** that reflects the core concept. "
-        "2. A **detailed yet brief description** (3-5 sentences) explaining the project's objectives, key features, and impact. "
-        "3. A **difficulty level** categorized as Beginner, Intermediate, or Advanced. "
-        "Format EXACTLY like this with dashes as separators: "
-        "- **Title**: [title] - **Description**: [description] - **Difficulty**: [difficulty]"
-        " Make sure each project is on a single line with these exact separators."
+        "Each project should include:\n"
+        "1. A **clear and concise title** that reflects the core concept.\n"
+        "2. A **detailed yet brief description** (3-5 sentences) explaining the project's objectives, key features, and impact.\n"
+        "3. A **difficulty level** categorized as Beginner, Intermediate, or Advanced.\n"
+        "Format EXACTLY like this with dashes as separators:\n"
+        "- **Title**: [title] - **Description**: [description] - **Difficulty**: [difficulty]\n"
+        "Make sure each project is on a single line with these exact separators."
     )
 
     # Generate content
     response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=prompt
+        model="gemini-2.0-flash",
+        contents=prompt
     )
     
     print("Raw response:", response.text)
@@ -45,25 +52,22 @@ def generate_project_suggestions(params: StudentParams) -> List[ProjectSuggestio
     projects = [] 
     response_text = response.text.strip() if response.text else ""
     
-    # Let's see the actual format by printing the full response for debugging
+    # Debugging: Print the full response
     print("Full response for debugging:")
     print(response_text)
     
     # More robust pattern matching approach
-    import re
-    
-    # Look for title, description, and difficulty patterns throughout the text
     title_pattern = r'\*\*Title\*\*:\s*(.*?)(?=\s*-\s*\*\*Description|$)'
     desc_pattern = r'\*\*Description\*\*:\s*(.*?)(?=\s*-\s*\*\*Difficulty|$)'
     diff_pattern = r'\*\*Difficulty\*\*:\s*(.*?)(?=\s*-\s*\*\*|$)'
-    
+
     # Find all matches
     titles = re.findall(title_pattern, response_text)
     descriptions = re.findall(desc_pattern, response_text)
     difficulties = re.findall(diff_pattern, response_text)
     
     print(f"Found {len(titles)} titles, {len(descriptions)} descriptions, {len(difficulties)} difficulties")
-    
+
     # Create projects from matching patterns
     for i in range(min(len(titles), len(descriptions), len(difficulties))):
         projects.append(ProjectSuggestion(
@@ -390,11 +394,13 @@ def generate_module_details(module: Module) -> ModuleDetails:
         '      "title": "",\n'
         '      "explanation": "",\n'
         '      "example": "",\n'
+        '      "code": "",\n'
+        '      "algorithm": "",\n'
         '      "resources": ["", ""]\n'
         '    }\n'
         '  ]\n'
         '}\n\n'
-        "All string values must have escaped quotes. No markdown, only strict JSON."
+        "All string values must have escaped quotes. The 'code' field should contain the relevant code snippet for the step, if applicable, otherwise an empty string. The 'algorithm' field should describe the algorithm used in the step, if applicable, otherwise an empty string. No markdown, only strict JSON."
     )
 
     # Send to Gemini model
@@ -417,6 +423,8 @@ def generate_module_details(module: Module) -> ModuleDetails:
                     "title": step.get("title", "Untitled"),
                     "explanation": step.get("explanation", ""),
                     "example": step.get("example", ""),
+                    "code": step.get("code", ""),
+                    "algorithm": step.get("algorithm", ""),
                     "resources": step.get("resources", [])
                 }
                 for step in parsed.get("steps", []) if isinstance(step, dict)
@@ -441,9 +449,11 @@ def get_project_resources(title: str, overview: str) -> dict:
         "- resources: list of dictionaries containing:\n"
         "  - 'type': type of the resource (e.g., 'article', 'video', 'course', 'documentation')\n"
         "  - 'name': Name of the resource\n"
-        "  - 'url': Clickable link to the resource (official websites, YouTube tutorials, blogs, or documentation)\n"
+        "  - 'url': A valid, clickable link to the resource (official websites, YouTube tutorials, blogs, or documentation). If the type is 'video', ensure the YouTube URL is valid and the video is accessible.\n"
         "  - 'description': Short description of the resource (1-2 sentences)\n"
-        "Ensure the resources are sourced from diverse platforms (e.g., YouTube, blogs, official documentation, websites) and are relevant to the project title and overview.\n"
+        "  - 'estimated_time': Estimated time to read or complete the resource (in minutes). For articles, it could be reading time; for videos/courses, it could be the duration of the video/course.\n"
+        "Ensure the resources are sourced from trusted platforms (e.g., YouTube, blogs, official documentation, websites) and are directly relevant to the project title and overview.\n"
+        "The YouTube videos should be verified to be working and accessible.\n"
         "Return the response as a **valid JSON object** with no extra text."
     )
 
@@ -466,3 +476,89 @@ def get_project_resources(title: str, overview: str) -> dict:
 
     # Return the resources data
     return resources_data
+
+
+
+def get_diagram_details(project_title: str, project_description: str) -> DiagramDetails:
+    """
+    Fetches detailed diagram information (UML, Flowchart, DFD) for a given project.
+    
+    Args:
+        project_title (str): The title of the project.
+        project_description (str): A short description of the project.
+    
+    Returns:
+        DiagramDetails: An object containing the title, description, and diagram details.
+    """
+
+    prompt = (
+        f"Create a structured JSON response for the project titled '{project_title}'.\n"
+        f"Project description: {project_description}\n\n"
+        "The JSON should have these keys:\n"
+        "- title: string\n"
+        "- description: string (short about the project)\n"
+        "- diagrams: dictionary with the following structure:\n"
+        "  {\n"
+        "    \"UML\": {\n"
+        "      \"description\": \"Short description of the UML\",\n"
+        "      \"classes\": [\n"
+        "        {\"name\": \"EntityName\", \"attributes\": [\"attribute1\", \"attribute2\"], \"methods\": [\"method1\", \"method2\"]}\n"
+        "      ],\n"
+        "      \"relationships\": [\n"
+        "        {\"source\": \"EntityName1\", \"target\": \"EntityName2\", \"type\": \"association\"}\n"
+        "      ]\n"
+        "    },\n"
+        "    \"Flowchart\": {\n"
+        "      \"description\": \"Short description of flowchart\",\n"
+        "      \"elements\": [\n"
+        "        {\"type\": \"start\", \"id\": \"start\", \"text\": \"Start\"},\n"
+        "        {\"type\": \"process\", \"id\": \"process1\", \"text\": \"Action\"},\n"
+        "        {\"type\": \"end\", \"id\": \"end\", \"text\": \"End\"}\n"
+        "      ],\n"
+        "      \"connections\": [\n"
+        "        {\"source\": \"start\", \"destination\": \"process1\", \"label\": \"Start process\"}\n"
+        "      ]\n"
+        "    },\n"
+        "    \"DFD\": {\n"
+        "      \"description\": \"Short description of DFD\",\n"
+        "      \"entities\": [\n"
+        "        {\"name\": \"User\"},\n"
+        "        {\"name\": \"System\"}\n"
+        "      ],\n"
+        "      \"data_flows\": [\n"
+        "        {\"source\": \"User\", \"destination\": \"System\", \"data\": \"Input data\"}\n"
+        "      ]\n"
+        "    }\n"
+        "  }\n\n"
+        "Instructions:\n"
+        "- Infer logical relationships and connections based on the project description.\n"
+        "- For UML, include at least 5 relationships (e.g., association, aggregation, composition, inheritance) with 'type' as 'association', 'aggregation', 'composition', or 'inheritance'.\n"
+        "- For UML classes, include both attributes (data fields) and methods (functions) that are relevant to the class's role in the project. Methods should be action-oriented (e.g., 'addToCart', 'placeOrder').\n"
+        "- For Flowchart, ensure connections form a complete process flow from start to end.\n"
+        "- For DFD, ensure data_flows represent a complete interaction model.\n"
+        "- Return strictly in JSON format without any extra explanation."
+    )
+
+    # Generate content from model (adjust according to your LLM)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt
+    )
+
+    print("Raw AI Response:\n", response.text)  # Debugging
+
+    response_text = response.text if response.text else "{}"
+    response_text = response_text.strip().strip("```json").strip("```")
+
+    try:
+        diagram_data = json.loads(response_text)
+        print("Parsed Diagram JSON:\n", diagram_data)  # Debugging
+    except json.JSONDecodeError as e:
+        print("JSON Parsing Error:", e)
+        return DiagramDetails(title=project_title, description=project_description, diagrams={})
+
+    return DiagramDetails(
+        title=diagram_data.get("title", project_title),
+        description=diagram_data.get("description", project_description),
+        diagrams=diagram_data.get("diagrams", {})
+    )
