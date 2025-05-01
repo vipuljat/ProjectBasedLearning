@@ -71,7 +71,7 @@ const App = () => {
                 <Route path="/modules/:title" element={<ModulesPage />} />
                 <Route path="/moduleDetails" element={<ModuleDetailPage />} />
                 <Route path="/resourcesPage" element={<ResourcesPage />} />
-                <Route path="/moduleResoucePage" element={<ModuleResourcePage />} />
+                <Route path="/moduleResourcePage" element={<ModuleResourcePage />} />
                 <Route path="/diagramsPage" element={<DiagramsPage />} />
             </Routes>
         </Router>

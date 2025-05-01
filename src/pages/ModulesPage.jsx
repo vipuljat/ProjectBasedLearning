@@ -24,13 +24,53 @@ export default function ModulesPage() {
     // Fetch pre-generated module details
     const { data: moduleDetails, refetch: refetchModuleDetails, isLoading: isLoadingDetails } = useGetAllModuleDetailsQuery(
         modulesData?.[0]?.project_id || "",
-        { skip: !projectLoaded || !modulesData }
+        { skip: !modulesData }
     );
 
     // Update resources when location.state.resources changes
     useEffect(() => {
         setResources(location.state?.resources || null);
     }, [location.state?.resources]);
+
+    // Restore projectLoaded state from sessionStorage and load project automatically
+    useEffect(() => {
+        const storedProjectLoaded = sessionStorage.getItem(`projectLoaded_${title}`);
+        if (storedProjectLoaded === "true") {
+            setProjectLoaded(true);
+            return;
+        }
+
+        if (!modulesData || modulesData.length === 0 || loadingProject) return;
+
+        const loadProject = async () => {
+            setLoadingProject(true);
+            setProgress(0);
+            try {
+                // Sequentially generate details for each module with progress
+                for (let i = 0; i < modulesData.length; i++) {
+                    const module = modulesData[i];
+                    const transformedModule = transformModuleForApi(module);
+                    console.log("Payload being sent to /moduleDetails:", transformedModule);
+                    await getModuleDetails(transformedModule).unwrap();
+                    setProgress(((i + 1) / modulesData.length) * 100);
+                }
+                setProjectLoaded(true);
+                sessionStorage.setItem(`projectLoaded_${title}`, "true");
+                // Refetch module details after generation
+                await refetchModuleDetails();
+            } catch (error) {
+                console.error("Error loading project:", error);
+                if (error.status === 422) {
+                    console.error("Validation error. Details:", error.data);
+                }
+            } finally {
+                setLoadingProject(false);
+                setProgress(100);
+            }
+        };
+
+        loadProject();
+    }, [modulesData, title, getModuleDetails, refetchModuleDetails, loadingProject]);
 
     console.log("modulesData:", modulesData);
     console.log("resources:", resources);
@@ -79,36 +119,8 @@ export default function ModulesPage() {
         };
     };
 
-    const handleLoadProject = async () => {
-        if (!modulesData || modulesData.length === 0) return;
-
-        setLoadingProject(true);
-        setProgress(0);
-        try {
-            // Sequentially generate details for each module with progress
-            for (let i = 0; i < modulesData.length; i++) {
-                const module = modulesData[i];
-                const transformedModule = transformModuleForApi(module);
-                console.log("Payload being sent to /moduleDetails:", transformedModule);
-                await getModuleDetails(transformedModule).unwrap();
-                setProgress(((i + 1) / modulesData.length) * 100);
-            }
-            setProjectLoaded(true);
-            // Refetch module details after generation
-            await refetchModuleDetails();
-        } catch (error) {
-            console.error("Error loading project:", error);
-            if (error.status === 422) {
-                console.error("Validation error. Details:", error.data);
-            }
-        } finally {
-            setLoadingProject(false);
-            setProgress(100);
-        }
-    };
-
     const handleViewDetails = (detail) => {
-        navigate("/moduleResoucePage", { state: { module: detail, resources } });
+        navigate("/moduleResourcePage", { state: { module: detail, resources } });
     };
 
     const handleExploreResources = () => {
@@ -176,28 +188,18 @@ export default function ModulesPage() {
 
                     {/* Modules List */}
                     <div className="flex-1 overflow-y-auto">
-                        {/* Load Project Button */}
-                        <div className="mb-8">
-                            <button
-                                onClick={handleLoadProject}
-                                disabled={loadingProject || projectLoaded}
-                                className={`px-6 py-3 rounded-lg text-white font-semibold transition-all duration-300 ${
-                                    loadingProject || projectLoaded
-                                        ? "bg-[#191C27]/50 cursor-not-allowed"
-                                        : "bg-[#0095FF] hover:bg-[#0095FF]/90"
-                                }`}
-                            >
-                                {loadingProject ? "Loading Project..." : projectLoaded ? "Project Loaded" : "Load Project"}
-                            </button>
-                            {loadingProject && (
+                        {/* Progress Indicator */}
+                        {loadingProject && (
+                            <div className="mb-8">
+                                <div className="text-white font-semibold">Loading Project...</div>
                                 <div className="mt-4 w-full bg-[#2D2E34] h-2 rounded overflow-hidden">
                                     <div
                                         className="bg-[#0095FF] h-2 rounded transition-all duration-300"
                                         style={{ width: `${progress}%` }}
                                     ></div>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {modulesWithDates.map((module, index) => {

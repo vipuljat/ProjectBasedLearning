@@ -1,6 +1,9 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { persistReducer } from 'redux-persist';
+import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web
 
-export const projectApi = createApi({
+// RTK Query API definition
+const projectApiBase = createApi({
     reducerPath: 'projectApi',
     baseQuery: fetchBaseQuery({
         baseUrl: 'http://localhost:8000', // replace if using another URL
@@ -20,6 +23,7 @@ export const projectApi = createApi({
 
         fetchModules: builder.query({
             query: (title) => `/modules/${encodeURIComponent(title)}`,
+            keepUnusedDataFor: 86400, // Cache for 24 hours (in seconds)
         }),
 
         getModuleDetails: builder.mutation({
@@ -58,12 +62,28 @@ export const projectApi = createApi({
             query: (studentId) => `userPreferences/${studentId}`,
         }),
 
-        // New query to fetch all pre-generated module details for a project
         getAllModuleDetails: builder.query({
             query: (project_id) => `/moduleDetails/project/${encodeURIComponent(project_id)}`,
+            keepUnusedDataFor: 86400, // Cache for 24 hours (in seconds)
         }),
     }),
 });
+
+// Persist configuration for RTK Query reducer
+const persistConfig = {
+    key: 'projectApi',
+    storage,
+    whitelist: ['projectApi'], // Persist only the projectApi reducer
+};
+
+// Create persisted reducer
+const persistedProjectApiReducer = persistReducer(persistConfig, projectApiBase.reducer);
+
+// Export the API with persisted reducer
+export const projectApi = {
+    ...projectApiBase,
+    reducer: persistedProjectApiReducer,
+};
 
 export const {
     useSuggestProjectsMutation,
@@ -75,5 +95,5 @@ export const {
     useGetDiagramMutation,
     useGetStoredDiagramsQuery,
     useGetUserPreferencesQuery,
-    useGetAllModuleDetailsQuery, // Add the new hook
-} = projectApi;
+    useGetAllModuleDetailsQuery,
+} = projectApiBase;
