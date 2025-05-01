@@ -1,68 +1,81 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from isoduration import parse_duration
+from pydantic import BaseModel
 from models import StudentParams, ProjectSuggestion, ProjectModule
 from services import generate_project_suggestions
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from database import get_db
+from motor.motor_asyncio import AsyncIOMotorClient
 
 router = APIRouter()
 
 @router.post("/suggestProjects", response_model=List[ProjectSuggestion])
-async def suggest_projects(params: StudentParams, db=Depends(get_db)):
-    """Returns project suggestions based on user input, fetching from database if available."""
+async def suggest_projects(params: StudentParams, db = Depends(get_db)):
+    """Returns project suggestions based on user input, fetching from database if available, and stores user preferences with a hardcoded studentId."""
     try:
-        # Create a query to match the StudentParams
-        query = {
-            "params.skill_level": params.skill_level,
-            "params.project_type": params.project_type,
-            "params.technology": params.technology,
-            "params.duration": params.duration,
-            "params.domain": params.domain,
-            "params.time_commitment": params.time_commitment,
+        # Hardcode studentId for testing
+        student_id = "008"
+
+        
+
+        # Construct user preferences
+        user_preferences = {
+            "studentId": student_id,
+            "skillLevel": params.skill_level,
+            "projectType": params.project_type,
+            "technology": params.technology,
+            "domain": params.domain,
+            "hoursPerDay": params.time_commitment,
+            "totalWeeks": params.duration,
+            "updatedAt": datetime.utcnow(),
         }
 
-        # Check if projects already exist in the database
-        collection = db["suggestedProjects"]
-        existing_entry = await collection.find_one(query)
+        # Store user preferences in MongoDB
+        preferences_collection = db["UserPreferences"]
+        await preferences_collection.update_one(
+            {"studentId": student_id},
+            {
+                "$set": user_preferences,
+                "$setOnInsert": {"createdAt": datetime.utcnow()}
+            },
+            upsert=True
+        )
 
-        if existing_entry:
-            # If found, return the stored suggestions as ProjectSuggestion
-            return [
-                ProjectSuggestion(
-                    title=proj["module_title"],
-                    description=proj["summary"],
-                    difficulty="N/A"  # Set to "N/A" since difficulty is not stored
-                )
-                for proj in existing_entry["suggestions"]
-            ]
-
-        # If no projects found, generate new ones
+        # Generate project suggestions
         suggestions = generate_project_suggestions(params)
         if not suggestions or (len(suggestions) == 1 and suggestions[0].title == "No suggestions"):
             return [{"title": "No suggestions", "description": "Try again later.", "difficulty": "N/A"}]
 
-        # Map ProjectSuggestion to ProjectModule for storage
-        projects_to_save = [
-            ProjectModule(
-                module_title=suggestion.title,
-                summary=suggestion.description,
-                steps=[f"Step {i+1}: Start implementing {suggestion.title.lower()}" for i in range(3)],  # Placeholder steps
-                prerequisites=[f"{params.skill_level.capitalize()} coding skills", f"Knowledge of {params.technology}"],  # Based on input
-                tentative_duration=params.duration if params.duration else "1 week",  # Use input duration or default
-                
-                
-            )
-            for suggestion in suggestions
-        ]
-
-        # Save to MongoDB with the params for future lookup
-        document_to_insert = {
-            "params": params.dict(),
-            "suggestions": [project.dict(exclude_unset=True) for project in projects_to_save],
-            "created_at": datetime.utcnow(),
-        }
-        await collection.insert_one(document_to_insert)
-
         return suggestions
+    except HTTPException as e:
+        raise e
     except Exception as e:
         return [{"title": "Error", "description": f"Failed to generate or save suggestions: {str(e)}", "difficulty": "N/A"}]
+    
+    
+    
+class UserPreferences(BaseModel):
+    studentId: str
+    skillLevel: str
+    projectType: str
+    technology: str
+    domain: Optional[str] = None
+    hoursPerDay: str
+    totalWeeks: str
+    updatedAt: datetime
+    createdAt: Optional[datetime] = None
+
+@router.get("/userPreferences/{studentId}", response_model=UserPreferences)
+async def get_user_preferences(studentId: str, db: AsyncIOMotorClient = Depends(get_db)):
+    """Fetch user preferences for a specific studentId."""
+    try:
+        preferences_collection = db["UserPreferences"]
+        preferences = await preferences_collection.find_one({"studentId": studentId})
+        if not preferences:
+            raise HTTPException(status_code=404, detail=f"No preferences found for studentId: {studentId}")
+        return preferences
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch user preferences: {str(e)}")

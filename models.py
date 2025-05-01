@@ -90,12 +90,13 @@ class Overview(BaseModel):
     learning_outcomes: List[str]
 
 class ProjectModule(BaseModel):
+    module_id: str
+    project_id: str
     module_title: str
     summary: str
     steps: List[str]
     prerequisites: List[str]
     tentative_duration: str
-    created_at: Optional[datetime] = None  # Removed difficulty field
 
     class Config:
         json_encoders = {
@@ -112,21 +113,44 @@ class Module(BaseModel):
     steps: List[ModuleStep]
 
 # Used for the detailed module response (from backend to frontend)
+class Task(BaseModel):
+    taskId: str  # UUID for traceability
+    hour: str
+    title: str
+    explanation: str
+    example: str
+    code: str   
+    algorithm: str
+    resources: List[str]
+    estimated_time: str
+
+class Day(BaseModel):
+    dayId: str  # UUID for traceability
+    day_number: int  # Sequential number for the day
+    tasks: List[Task]
+    date: datetime
+
 class Step(BaseModel):
     title: str
     explanation: str
     example: str
-    resources: List[str]
     code: str
     algorithm: str
+    resources: List[str]
 
 class ModuleDetails(BaseModel):
+    projectId: str
+    moduleId: str
     title: str
     description: str
     steps: List[Step]
+    total_weeks: int
+    hours_per_day: int
+    module_total_hours: int
+    stored_at: str
+    days: List[dict] = []
 
 # Define the expected response structure
 class DiagramDetails(BaseModel):
     title: str
-    description: str
     diagrams: Dict[str, Any]  # UML, Flowchart, DFD etc.

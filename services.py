@@ -1,5 +1,9 @@
+from datetime import datetime, timedelta
+import uuid
+from fastapi import HTTPException
 from google import genai
-from models import DiagramDetails, Module, ModuleDetails, Overview, ProjectModule, StudentParams, ProjectSuggestion, ProjectDetails, TimeEstimation
+import pydantic_core
+from models import DiagramDetails, Module, ProjectModule, ModuleDetails, Overview, ProjectModule, StudentParams, ProjectSuggestion, ProjectDetails, TimeEstimation
 from config import GEMINI_API_KEY, GEMINI_MODEL
 from typing import List, Dict
 import json , re
@@ -42,7 +46,7 @@ def generate_project_suggestions(params: StudentParams) -> List[ProjectSuggestio
 
     # Generate content
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-1.5-flash",
         contents=prompt
     )
     
@@ -153,7 +157,7 @@ def get_project_details(project_title: str) -> ProjectDetails:
     )
 
     # Generate content
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
 
     print("Raw AI Response:\n", response.text)  # Debugging
 
@@ -221,7 +225,7 @@ def get_project_overview(project_title: str) -> Overview:
 
 
     # Generate content
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
     print("Raw AI Response:\n", response.text)
 
     if not response.text:
@@ -298,81 +302,82 @@ def get_project_overview(project_title: str) -> Overview:
         raise ValueError(f"Error processing Gemini response: {e}")
 
 
-def get_project_modules(project_title: str) -> List[ProjectModule]:
+def get_project_modules(project_title: str, total_weeks: int, hours_per_day: int, project_id: str) -> List[ProjectModule]:
     """
-    Generates modular breakdown of a project (setup, UI, API, integration, etc.) in strict JSON format.
+    Generates a weekly modular breakdown for a project with module_id and project_id mapping.
     """
     prompt = (
-        f"Create a detailed step-by-step modular breakdown for the project titled '{project_title}'. "
-        f"Divide the project into weekly modules. Each module should have:\n"
-        "- A title (e.g., 'Initial Setup', 'UI Design', etc.)\n"
-        "- A brief summary\n"
-        "- A list of steps (like 'Install VS Code', 'Set up React project', etc.)\n"
-        "- A list of prerequisites (e.g., 'Basic HTML knowledge', 'Node.js installed', etc.)\n"
-        "- A tentative duration (e.g., '1 week', '2-3 days', etc.)\n\n"
-        "Respond in EXACTLY this JSON format without any explanation or code block:\n"
-        '[\n'
-        '  {\n'
-        '    "module_title": "",\n'
-        '    "summary": "",\n'
-        '    "steps": ["", "", ""],\n'
-        '    "prerequisites": ["", "", ""],\n'
-        '    "tentative_duration": ""\n'
-        '  }\n'
-        ']'
+        f"You are an AI project planner. Create a detailed weekly modular breakdown for the project titled '{project_title}'.\n"
+        f"The project duration is {total_weeks} weeks and the user can dedicate approximately {hours_per_day} hours per day.\n"
+        f"Break the project into exactly {total_weeks} weekly modules. Each week should represent a new stage of the project development.\n\n"
+        
+        f"For each weekly module, provide the following fields in JSON format ONLY:\n"
+        f"- module_title: A short and clear title for the week's focus.\n"
+        f"- summary: A brief explanation of what will be accomplished in that week.\n"
+        f"- steps: A list of action items or learning/building steps to complete during the week.\n"
+        f"- prerequisites: A comprehensive list of technologies, tools, or knowledge needed **before** starting that module. For example, if the module is about frontend development, prerequisites should include HTML, CSS, JavaScript, etc.\n"
+        f"- tentative_duration: An estimated duration in days to complete that module (e.g., '5 days').\n\n"
+
+        f"Ensure all modules are logically ordered and collectively cover the entire scope of the project. Make sure that each prerequisite list is accurate and includes all necessary tools, skills, or concepts.\n"
+        f"Return output as a valid JSON array ONLY. Do not include any markdown, commentary, or formatting. No introductory text. No explanation."
     )
 
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-    print("Raw AI response:\n", response.text)
+    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
 
     if not response.text:
         raise ValueError("No response received from Gemini")
 
     try:
-        # Clean the response string
         json_text = response.text.strip()
-        json_text = re.sub(r"^```json\s*|```$", "", json_text.strip(), flags=re.IGNORECASE)
+        json_text = re.sub(r"^```json\s*|```$", "", json_text, flags=re.IGNORECASE)
         json_text = json_text.replace("'", '"')
         json_text = re.sub(r",\s*}", "}", json_text)
         json_text = re.sub(r",\s*]", "]", json_text)
-
-        # If needed: fix keys not in quotes (Gemini sometimes returns that)
         json_text = re.sub(r'([{,]\s*)(\w+)(\s*:)', r'\1"\2"\3', json_text)
-
-        print("Processed JSON:\n", json_text)
 
         modules_data = json.loads(json_text)
 
-        # Optional: validate format
-        validated_modules = [
-            ProjectModule(
-                module_title=mod.get("module_title", "Untitled"),
-                summary=mod.get("summary", ""),
-                steps=mod.get("steps", []),
-                prerequisites=mod.get("prerequisites", []),
-                tentative_duration=mod.get("tentative_duration", "")
-            )
-            for mod in modules_data if isinstance(mod, dict)
-        ]
+        validated_modules = []
+        for mod in modules_data:
+            if isinstance(mod, dict):
+                validated_modules.append(
+                    ProjectModule(
+                        module_id=str(uuid.uuid4()),
+                        project_id=project_id,
+                        module_title=mod.get("module_title", "Untitled"),
+                        summary=mod.get("summary", ""),
+                        steps=mod.get("steps", []),
+                        prerequisites=mod.get("prerequisites", []),
+                        tentative_duration=mod.get("tentative_duration", "")
+                    )
+                )
 
         return validated_modules
 
     except json.JSONDecodeError as parse_error:
         print(f"JSON parse error: {parse_error}")
-        print(f"Error location: {json_text[max(0, parse_error.pos-30):parse_error.pos+30]}")
         raise ValueError("Invalid JSON format from Gemini")
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
         raise ValueError(f"Failed to parse Gemini response: {str(e)}")
     
     
     
 
-def generate_module_details(module: Module) -> ModuleDetails:
+def generate_module_details(
+    module: Module,
+    total_weeks: int,
+    hours_per_day: int,
+    projectId: str,
+    moduleId: str
+) -> ModuleDetails:
     """
     Generates detailed breakdown using full module data, not just the title.
     """
+
+    # Each module is fixed at 1 week (7 days)
+    module_days = 7
+    module_total_hours = module_days * hours_per_day
 
     prompt = (
         f"You're an expert educator helping a beginner understand the following module.\n\n"
@@ -385,7 +390,10 @@ def generate_module_details(module: Module) -> ModuleDetails:
         prompt += f"{i}. {step.title}: {step.description}\n"
 
     prompt += (
-        "\nNow generate a JSON response in the following format. STRICT JSON only, no markdown, no extra text.\n\n"
+        f"\nThe student has a total of {total_weeks} weeks and can dedicate {hours_per_day} hours per day across the entire project, "
+        f"which includes multiple modules. For this specific module, allocate tasks within a fixed duration of 1 week (7 days), "
+        f"with a total available time of {module_total_hours} hours for this module. "
+        f"Generate a STRICT JSON response with the following structure. No markdown, no extra text.\n\n"
         '{\n'
         '  "title": "",\n'
         '  "description": "",\n'
@@ -400,11 +408,11 @@ def generate_module_details(module: Module) -> ModuleDetails:
         '    }\n'
         '  ]\n'
         '}\n\n'
-        "All string values must have escaped quotes. The 'code' field should contain the relevant code snippet for the step, if applicable, otherwise an empty string. The 'algorithm' field should describe the algorithm used in the step, if applicable, otherwise an empty string. No markdown, only strict JSON."
+        "Use double quotes for all property names and string values. The 'code' field should contain the relevant code snippet for the step, if applicable, otherwise an empty string. The 'algorithm' field should describe the algorithm used in the step, if applicable, otherwise empty string."
     )
 
     # Send to Gemini model
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
     print("Raw AI response:\n", response.text)
 
     if not response.text:
@@ -415,9 +423,13 @@ def generate_module_details(module: Module) -> ModuleDetails:
         json_text = re.sub(r"^```json\s*|```$", "", json_text, flags=re.IGNORECASE).strip()
         parsed = json.loads(json_text)
 
+        # Ensure the 'description' is always populated
+        description = parsed.get("description", module.summary)  # Fallback to module.summary if not found
+
+        # Build the validated data structure
         validated_data = {
-            "title": parsed.get("title", module.title),
-            "description": parsed.get("description", module.summary),
+            "title": parsed.get("title", module.title),  # Ensure title is always populated
+            "description": description,
             "steps": [
                 {
                     "title": step.get("title", "Untitled"),
@@ -428,16 +440,25 @@ def generate_module_details(module: Module) -> ModuleDetails:
                     "resources": step.get("resources", [])
                 }
                 for step in parsed.get("steps", []) if isinstance(step, dict)
-            ]
+            ],
+            "projectId": projectId,
+            "moduleId": moduleId,
+            "total_weeks": total_weeks,
+            "hours_per_day": hours_per_day,
+            "module_total_hours": module_total_hours,
+            "stored_at": datetime.utcnow().isoformat(),
+            "days": []  # Remains empty as per current logic
         }
 
+        # Return ModuleDetails instance
         return ModuleDetails(**validated_data)
 
     except json.JSONDecodeError as err:
         print(f"JSON error: {err}")
         raise ValueError("Invalid JSON from Gemini")
-    
-    
+
+
+
     
 def get_project_resources(title: str, overview: str) -> dict:
     """Fetches a list of resources (articles, videos, courses, documentation) for a selected project from multiple platforms (YouTube, blogs, websites, documentation sites) based on the project title and overview."""
@@ -458,7 +479,7 @@ def get_project_resources(title: str, overview: str) -> dict:
     )
 
     # Generate content
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
 
     print("Raw AI Response:\n", response.text)  # Debugging
 
@@ -479,7 +500,7 @@ def get_project_resources(title: str, overview: str) -> dict:
 
 
 
-def get_diagram_details(project_title: str, project_description: str) -> DiagramDetails:
+def get_diagram_details(project_title: str) -> DiagramDetails:
     """
     Fetches detailed diagram information (UML, Flowchart, DFD) for a given project.
     
@@ -493,7 +514,6 @@ def get_diagram_details(project_title: str, project_description: str) -> Diagram
 
     prompt = (
         f"Create a structured JSON response for the project titled '{project_title}'.\n"
-        f"Project description: {project_description}\n\n"
         "The JSON should have these keys:\n"
         "- title: string\n"
         "- description: string (short about the project)\n"
@@ -541,7 +561,7 @@ def get_diagram_details(project_title: str, project_description: str) -> Diagram
 
     # Generate content from model (adjust according to your LLM)
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-1.5-flash",
         contents=prompt
     )
 
@@ -555,10 +575,9 @@ def get_diagram_details(project_title: str, project_description: str) -> Diagram
         print("Parsed Diagram JSON:\n", diagram_data)  # Debugging
     except json.JSONDecodeError as e:
         print("JSON Parsing Error:", e)
-        return DiagramDetails(title=project_title, description=project_description, diagrams={})
+        return DiagramDetails(title=project_title, diagrams={})
 
     return DiagramDetails(
         title=diagram_data.get("title", project_title),
-        description=diagram_data.get("description", project_description),
         diagrams=diagram_data.get("diagrams", {})
     )
