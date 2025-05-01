@@ -32,3 +32,7 @@ async def project_resources(request: ProjectResourceRequest = Body(...), db=Depe
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to fetch or save resources.")
+
+
+
+

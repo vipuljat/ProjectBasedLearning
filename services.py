@@ -368,8 +368,8 @@ def generate_module_details(
     module: Module,
     total_weeks: int,
     hours_per_day: int,
-    projectId: str,
-    moduleId: str
+    project_id: str,
+    module_id: str
 ) -> ModuleDetails:
     """
     Generates detailed breakdown using full module data, not just the title.
@@ -441,8 +441,8 @@ def generate_module_details(
                 }
                 for step in parsed.get("steps", []) if isinstance(step, dict)
             ],
-            "projectId": projectId,
-            "moduleId": moduleId,
+            "project_id": project_id,
+            "module_id": module_id,
             "total_weeks": total_weeks,
             "hours_per_day": hours_per_day,
             "module_total_hours": module_total_hours,

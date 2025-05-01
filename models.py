@@ -108,6 +108,8 @@ class ModuleStep(BaseModel):
     description: str
 
 class Module(BaseModel):
+    project_id: str
+    module_id: str
     title: str
     summary: str
     steps: List[ModuleStep]
@@ -139,8 +141,8 @@ class Step(BaseModel):
     resources: List[str]
 
 class ModuleDetails(BaseModel):
-    projectId: str
-    moduleId: str
+    project_id: str
+    module_id: str
     title: str
     description: str
     steps: List[Step]

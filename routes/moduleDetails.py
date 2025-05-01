@@ -19,6 +19,7 @@ async def get_module_details(module: Module, db: AsyncIOMotorClient = Depends(ge
     try:
         collection = db["moduleDetails"]
         preferences_collection = db["UserPreferences"]
+        print(module)
 
         # Fetch user preferences (duration and timeCommitment)
         user_prefs = await preferences_collection.find_one({"studentId": "008"})
@@ -49,8 +50,8 @@ async def get_module_details(module: Module, db: AsyncIOMotorClient = Depends(ge
             module=module,
             total_weeks=total_weeks,
             hours_per_day=hours_per_day,
-            projectId=project_id,
-            moduleId=module_id
+            project_id=project_id,
+            module_id=module_id
         )
 
         # Log the full response data for inspection
@@ -60,8 +61,8 @@ async def get_module_details(module: Module, db: AsyncIOMotorClient = Depends(ge
             "title": module.title,
             "summary": module.summary,
             "details": details.dict(),
-            "projectId": details.projectId,
-            "moduleId": details.moduleId,
+            "project_id": details.project_id,
+            "module_id": details.module_id,
             "total_weeks": details.total_weeks,
             "hours_per_day": details.hours_per_day,
             "module_total_hours": details.module_total_hours,

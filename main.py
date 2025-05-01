@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import suggest, details, overview , modules, moduleDetails , resources , projects , diagrams 
+from routes import suggest, details, overview , modules, moduleDetails , resources , projects , diagrams , moduleResources
 
 
 app = FastAPI()
@@ -24,6 +24,7 @@ app.include_router(moduleDetails.router)
 app.include_router(resources.router)
 app.include_router(projects.router)
 app.include_router(diagrams.router)
+app.include_router(moduleResources.router)
 
 
 
