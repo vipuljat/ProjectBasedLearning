@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Clock, BarChart2, Calendar } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-import { useFetchProjectOverviewQuery, useFetchModulesQuery, useGetResourcesMutation } from "../services/projectApi";
+import { useFetchProjectOverviewQuery, useFetchModulesQuery, useGetResourcesMutation, useGetUserPreferencesQuery } from "../services/projectApi";
 
 export default function ProjectOverview() {
     const { title } = useParams();
@@ -14,20 +14,23 @@ export default function ProjectOverview() {
     const [isStarted, setIsStarted] = useState(false);
     const navigate = useNavigate();
 
+    // Fetch user preferences for studentId "008"
+    const { data: userPreferences, isLoading: isPreferencesLoading, isError: isPreferencesError } = useGetUserPreferencesQuery("008");
+
     const handleStartProject = async () => {
         if (!isStarted && projectOverview?.project_title) {
             setIsStarted(true);
             console.log("Project Started:", projectOverview.project_title);
-    
+
             const requestBody = {
                 title: projectOverview.project_title,
                 overview: projectOverview.description || "No overview available",
             };
-    
+
             try {
                 const response = await getResources(requestBody).unwrap(); // Capture the data
                 console.log("Resources response:", response);
-    
+
                 // Now pass it directly to the next page
                 navigate(`/modules/${projectOverview.project_title}`, { state: { resources: response } });
             } catch (err) {
@@ -36,9 +39,8 @@ export default function ProjectOverview() {
             }
         }
     };
-    
 
-    if (isOverviewLoading || isModulesLoading || isResourcesLoading) {
+    if (isOverviewLoading || isModulesLoading || isResourcesLoading || isPreferencesLoading) {
         return (
             <div className="bg-[#0C111D] text-[#F2F2F2] min-h-screen flex justify-center items-center">
                 <p>Loading project overview...</p>
@@ -46,15 +48,19 @@ export default function ProjectOverview() {
         );
     }
 
-    if (isOverviewError || isResourcesError || !projectOverview) {
+    if (isOverviewError || isResourcesError || isPreferencesError || !projectOverview || !userPreferences) {
         return (
             <div className="bg-[#0C111D] text-[#F2F2F2] min-h-screen flex justify-center items-center">
-                <p>Failed to load project overview.</p>
+                <p>Failed to load project overview or user preferences.</p>
             </div>
         );
     }
 
-    const estimatedWeeks = Math.ceil(projectOverview.estimated_time.total_estimated_days / 7);
+    // Use user preferences to override hardcoded values
+    const totalWeeks = userPreferences.totalWeeks || Math.ceil(projectOverview.estimated_time.total_estimated_days / 7);
+    const hoursPerDay = userPreferences.hoursPerDay || 4; // Default to 4 hours if not available
+    const commitmentRange = `${hoursPerDay - 2}-${hoursPerDay + 2} hrs/week`; // Dynamic range based on hoursPerDay
+    const difficulty = projectOverview.is_industrial_level ? "Advanced" : "Intermediate"; // Keep this from projectOverview
 
     return (
         <div>
@@ -116,7 +122,7 @@ export default function ProjectOverview() {
                                 </div>
                                 <div>
                                     <div className="text-xs text-[#F2F2F2]/60">Duration</div>
-                                    <div className="text-sm">{estimatedWeeks} weeks</div>
+                                    <div className="text-sm">{totalWeeks}</div>
                                 </div>
                             </div>
                             <div className="flex items-center">
@@ -125,9 +131,7 @@ export default function ProjectOverview() {
                                 </div>
                                 <div>
                                     <div className="text-xs text-[#F2F2F2]/60">Difficulty</div>
-                                    <div className="text-sm">
-                                        {projectOverview.is_industrial_level ? "Advanced" : "Intermediate"}
-                                    </div>
+                                    <div className="text-sm">{difficulty}</div>
                                 </div>
                             </div>
                             <div className="flex items-center">
@@ -136,7 +140,7 @@ export default function ProjectOverview() {
                                 </div>
                                 <div>
                                     <div className="text-xs text-[#F2F2F2]/60">Commitment</div>
-                                    <div className="text-sm">4–6 hrs/week</div>
+                                    <div className="text-sm">{hoursPerDay}</div>
                                 </div>
                             </div>
                         </div>
@@ -170,3 +174,6 @@ export default function ProjectOverview() {
         </div>
     );
 }
+
+
+

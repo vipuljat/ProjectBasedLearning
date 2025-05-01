@@ -1,13 +1,13 @@
 "use client";
 
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import Header from "../components/Header";
 import "react-calendar/dist/Calendar.css";
 import "../styles/CalendarStyles.css";
-
-import { useFetchModulesQuery, useGetModuleDetailsMutation } from "../services/projectApi";
+import { useFetchModulesQuery, useGetModuleDetailsMutation, useGetAllModuleDetailsQuery } from "../services/projectApi";
+import { ChevronRight } from "lucide-react";
 
 export default function ModulesPage() {
     const { title } = useParams();
@@ -16,11 +16,26 @@ export default function ModulesPage() {
     const { data: modulesData, isLoading, isError } = useFetchModulesQuery(title);
     const [getModuleDetails] = useGetModuleDetailsMutation();
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const resources = location.state?.resources || null;
+    const [resources, setResources] = useState(location.state?.resources || null);
+    const [loadingProject, setLoadingProject] = useState(false);
+    const [projectLoaded, setProjectLoaded] = useState(false);
+    const [progress, setProgress] = useState(0);
 
-    console.log("modules", modulesData);
+    // Fetch pre-generated module details
+    const { data: moduleDetails, refetch: refetchModuleDetails, isLoading: isLoadingDetails } = useGetAllModuleDetailsQuery(
+        modulesData?.[0]?.project_id || "",
+        { skip: !projectLoaded || !modulesData }
+    );
 
-    // Generate random progress for each module (in a real app, this would come from your API)
+    // Update resources when location.state.resources changes
+    useEffect(() => {
+        setResources(location.state?.resources || null);
+    }, [location.state?.resources]);
+
+    console.log("modulesData:", modulesData);
+    console.log("resources:", resources);
+    console.log("moduleDetails:", moduleDetails);
+
     const generateModuleProgress = () => {
         return Math.floor(Math.random() * 100);
     };
@@ -53,23 +68,47 @@ export default function ModulesPage() {
 
     const transformModuleForApi = (module) => {
         return {
+            module_id: module.module_id,
+            project_id: module.project_id,
             title: module.module_title,
             summary: module.summary,
-            steps: module.steps.map((step) => ({
+            steps: (module.steps || []).map((step) => ({
                 title: step,
                 description: step,
             })),
         };
     };
 
-    const handleViewDetails = async (module) => {
+    const handleLoadProject = async () => {
+        if (!modulesData || modulesData.length === 0) return;
+
+        setLoadingProject(true);
+        setProgress(0);
         try {
-            const transformedModule = transformModuleForApi(module);
-            const response = await getModuleDetails(transformedModule).unwrap();
-            navigate("/moduleDetails", { state: { module: response } });
+            // Sequentially generate details for each module with progress
+            for (let i = 0; i < modulesData.length; i++) {
+                const module = modulesData[i];
+                const transformedModule = transformModuleForApi(module);
+                console.log("Payload being sent to /moduleDetails:", transformedModule);
+                await getModuleDetails(transformedModule).unwrap();
+                setProgress(((i + 1) / modulesData.length) * 100);
+            }
+            setProjectLoaded(true);
+            // Refetch module details after generation
+            await refetchModuleDetails();
         } catch (error) {
-            console.error("Failed to fetch module details:", error);
+            console.error("Error loading project:", error);
+            if (error.status === 422) {
+                console.error("Validation error. Details:", error.data);
+            }
+        } finally {
+            setLoadingProject(false);
+            setProgress(100);
         }
+    };
+
+    const handleViewDetails = (detail) => {
+        navigate("/moduleResoucePage", { state: { module: detail, resources } });
     };
 
     const handleExploreResources = () => {
@@ -136,63 +175,96 @@ export default function ModulesPage() {
                     </div>
 
                     {/* Modules List */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 overflow-y-auto">
-                        {modulesWithDates.map((module, index) => (
-                            <div key={index} className="bg-[#141824] p-6 rounded-2xl shadow-md">
-                                <div className="flex justify-between items-start mb-4">
-                                    <h2 className="text-xl font-bold text-[#F2F2F2]">{module.module_title}</h2>
-                                    <div className="relative w-12 h-12">
-                                        {/* Progress Circle */}
-                                        <svg className="w-12 h-12" viewBox="0 0 36 36">
-                                            <circle cx="18" cy="18" r="16" fill="none" stroke="#2A2F3E" strokeWidth="2" />
-                                            <circle
-                                                cx="18"
-                                                cy="18"
-                                                r="16"
-                                                fill="none"
-                                                stroke="#0095FF"
-                                                strokeWidth="2"
-                                                strokeDasharray={`${module.progress}, 100`}
-                                                strokeLinecap="round"
-                                                transform="rotate(-90 18 18)"
-                                            />
-                                            <text x="18" y="20" textAnchor="middle" fill="#F2F2F2" fontSize="8" fontWeight="bold">
-                                                {module.progress}%
-                                            </text>
-                                        </svg>
+                    <div className="flex-1 overflow-y-auto">
+                        {/* Load Project Button */}
+                        <div className="mb-8">
+                            <button
+                                onClick={handleLoadProject}
+                                disabled={loadingProject || projectLoaded}
+                                className={`px-6 py-3 rounded-lg text-white font-semibold transition-all duration-300 ${
+                                    loadingProject || projectLoaded
+                                        ? "bg-[#191C27]/50 cursor-not-allowed"
+                                        : "bg-[#0095FF] hover:bg-[#0095FF]/90"
+                                }`}
+                            >
+                                {loadingProject ? "Loading Project..." : projectLoaded ? "Project Loaded" : "Load Project"}
+                            </button>
+                            {loadingProject && (
+                                <div className="mt-4 w-full bg-[#2D2E34] h-2 rounded overflow-hidden">
+                                    <div
+                                        className="bg-[#0095FF] h-2 rounded transition-all duration-300"
+                                        style={{ width: `${progress}%` }}
+                                    ></div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {modulesWithDates.map((module, index) => {
+                                // Find the corresponding module detail
+                                const detail = moduleDetails?.find((d) => d.module_id === module.module_id);
+                                return (
+                                    <div key={index} className="bg-[#141824] p-4 rounded-2xl shadow-md">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <h2 className="text-xl font-bold text-[#F2F2F2]">{module.module_title}</h2>
+                                            <div className="relative w-12 h-12">
+                                                {/* Progress Circle */}
+                                                <svg className="w-12 h-12" viewBox="0 0 36 36">
+                                                    <circle cx="18" cy="18" r="16" fill="none" stroke="#2A2F3E" strokeWidth="2" />
+                                                    <circle
+                                                        cx="18"
+                                                        cy="18"
+                                                        r="16"
+                                                        fill="none"
+                                                        stroke="#0095FF"
+                                                        strokeWidth="2"
+                                                        strokeDasharray={`${module.progress}, 100`}
+                                                        strokeLinecap="round"
+                                                        transform="rotate(-90 18 18)"
+                                                    />
+                                                    <text x="18" y="20" textAnchor="middle" fill="#F2F2F2" fontSize="8" fontWeight="bold">
+                                                        {module.progress}%
+                                                    </text>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-[#F2F2F2]/70 mb-4">Duration: {module.tentative_duration}</p>
+                                        <div className="mb-4">
+                                            <h3 className="text-sm font-semibold mb-2 text-[#F2F2F2]/70">Prerequisites</h3>
+                                            <ul className="space-y-1">
+                                                {(module.prerequisites || []).slice(0, 3).map((prereq, idx) => (
+                                                    <li key={idx} className="text-sm flex items-start">
+                                                        <span className="text-[#0095FF] mr-2">•</span>
+                                                        <span>{prereq}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                        <div className="mb-4">
+                                            <h3 className="text-sm font-semibold mb-2 text-[#F2F2F2]/70">Steps</h3>
+                                            <ol className="space-y-1">
+                                                {(module.steps || []).slice(0, 3).map((step, idx) => (
+                                                    <li key={idx} className="text-sm flex items-start">
+                                                        <span className="text-[#0095FF] mr-2">{idx + 1}.</span>
+                                                        <span>{step}</span>
+                                                    </li>
+                                                ))}
+                                            </ol>
+                                        </div>
+                                        {/* View Details Button */}
+                                        <button
+                                            onClick={() => detail && handleViewDetails(detail)}
+                                            disabled={!projectLoaded || isLoadingDetails || !detail}
+                                            className={`text-[#0095FF] hover:text-[#0095FF]/80 transition-colors flex items-center ${
+                                                !projectLoaded || isLoadingDetails || !detail ? "opacity-50 cursor-not-allowed" : ""
+                                            }`}
+                                        >
+                                            View Full Details <ChevronRight className="w-4 h-4 ml-1" />
+                                        </button>
                                     </div>
-                                </div>
-                                <p className="text-sm text-[#F2F2F2]/70 mb-4">Duration: {module.tentative_duration}</p>
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-semibold mb-2 text-[#F2F2F2]/70">Prerequisites</h3>
-                                    <ul className="space-y-1">
-                                        {module.prerequisites.slice(0, 3).map((prereq, idx) => (
-                                            <li key={idx} className="text-sm flex items-start">
-                                                <span className="text-[#0095FF] mr-2">•</span>
-                                                <span>{prereq}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-semibold mb-2 text-[#F2F2F2]/70">Steps</h3>
-                                    <ol className="space-y-1">
-                                        {module.steps.slice(0, 3).map((step, idx) => (
-                                            <li key={idx} className="text-sm flex items-start">
-                                                <span className="text-[#0095FF] mr-2">{idx + 1}.</span>
-                                                <span>{step}</span>
-                                            </li>
-                                        ))}
-                                    </ol>
-                                </div>
-                                <button
-                                    className="w-full bg-[#A855F7] hover:bg-[#9333EA] text-white py-3 px-4 rounded-lg transition duration-300 font-medium"
-                                    onClick={() => handleViewDetails(module)}
-                                >
-                                    View Details
-                                </button>
-                            </div>
-                        ))}
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

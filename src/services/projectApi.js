@@ -1,4 +1,3 @@
-// src/features/api/projectApi.js
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const projectApi = createApi({
@@ -43,6 +42,26 @@ export const projectApi = createApi({
             query: () => '/projects',
         }),
 
+        getDiagram: builder.mutation({
+            query: ({ module_title, steps }) => ({
+                url: '/diagrams',
+                method: 'POST',
+                body: { module_title, steps },
+            }),
+        }),
+
+        getStoredDiagrams: builder.query({
+            query: (project_title) => `/diagrams/${encodeURIComponent(project_title)}`,
+        }),
+
+        getUserPreferences: builder.query({
+            query: (studentId) => `userPreferences/${studentId}`,
+        }),
+
+        // New query to fetch all pre-generated module details for a project
+        getAllModuleDetails: builder.query({
+            query: (project_id) => `/moduleDetails/project/${encodeURIComponent(project_id)}`,
+        }),
     }),
 });
 
@@ -52,7 +71,9 @@ export const {
     useFetchModulesQuery,
     useGetModuleDetailsMutation,
     useGetResourcesMutation,
-    useGetProjectsQuery
+    useGetProjectsQuery,
+    useGetDiagramMutation,
+    useGetStoredDiagramsQuery,
+    useGetUserPreferencesQuery,
+    useGetAllModuleDetailsQuery, // Add the new hook
 } = projectApi;
-
-

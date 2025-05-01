@@ -10,6 +10,7 @@ export default function ProjectRecommendations() {
     const difficultyOptions = ['All', 'Beginner', 'Intermediate', 'Advanced'];
     const location = useLocation();
     const navigate = useNavigate(); // 👈 Add this
+    const userPreferences = location.state?.userPreferences || {};
 
     const projects = location.state?.projects || [];
 

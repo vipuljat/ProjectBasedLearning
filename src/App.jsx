@@ -14,6 +14,7 @@ import ResourcesPage from "./pages/ResourcesPage";
 import ModuleDetailPage from "./pages/moduleDetails";
 import YourProjects from "./pages/yourProjects";
 import ModuleResourcePage from "./pages/moduleResoucePage";
+import DiagramsPage from "./pages/DiagramsPage";
 
 
 const DiagramVisualizer = () => {
@@ -71,6 +72,7 @@ const App = () => {
                 <Route path="/moduleDetails" element={<ModuleDetailPage />} />
                 <Route path="/resourcesPage" element={<ResourcesPage />} />
                 <Route path="/moduleResoucePage" element={<ModuleResourcePage />} />
+                <Route path="/diagramsPage" element={<DiagramsPage />} />
             </Routes>
         </Router>
     );
