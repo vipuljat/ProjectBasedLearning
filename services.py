@@ -364,6 +364,10 @@ def get_project_modules(project_title: str, total_weeks: int, hours_per_day: int
     
     
 
+import json
+import re
+from datetime import datetime
+
 def generate_module_details(
     module: Module,
     total_weeks: int,
@@ -380,20 +384,24 @@ def generate_module_details(
     module_total_hours = module_days * hours_per_day
 
     prompt = (
-        f"You're an expert educator helping a beginner understand the following module.\n\n"
-        f"Title: {module.title}\n"
-        f"Summary: {module.summary}\n"
-        f"Steps:\n"
+        f"You are an expert educator with extensive expertise in the subject area, tasked with creating an in-depth, beginner-friendly breakdown of a module for a student with minimal programming or domain knowledge. Your goal is to provide comprehensive, actionable content that enables the student to understand and implement each step independently, with no additional external help required.\n\n"
+        f"**Module Context**:\n"
+        f"- **Title**: {module.title}\n"
+        f"- **Summary**: {module.summary}\n"
+        f"- **Steps**:\n"
     )
 
     for i, step in enumerate(module.steps, 1):
-        prompt += f"{i}. {step.title}: {step.description}\n"
+        prompt += f"  {i}. **{step.title}**: {step.description}\n"
 
     prompt += (
-        f"\nThe student has a total of {total_weeks} weeks and can dedicate {hours_per_day} hours per day across the entire project, "
-        f"which includes multiple modules. For this specific module, allocate tasks within a fixed duration of 1 week (7 days), "
-        f"with a total available time of {module_total_hours} hours for this module. "
-        f"Generate a STRICT JSON response with the following structure. No markdown, no extra text.\n\n"
+        f"\n**Project Context**:\n"
+        f"- This module is part of a larger project spanning {total_weeks} weeks.\n"
+        f"- The student can dedicate {hours_per_day} hours per day across all modules.\n"
+        f"- This module is allocated exactly 1 week (7 days), with a total of {module_total_hours} hours available.\n"
+        f"- The module’s steps should be distributed logically across the week, with estimated time allocations for each step.\n\n"
+        f"**Task**:\n"
+        f"Generate a detailed JSON response that breaks down the module into its steps, tailored for a beginner. Each step must include thorough explanations, practical examples, complete and runnable code snippets (if applicable), structured algorithms (if relevant), and curated resources. The response must adhere strictly to the following JSON structure, using double quotes for all property names and string values. Do not include markdown, comments, or any text outside the JSON object.\n\n"
         '{\n'
         '  "title": "",\n'
         '  "description": "",\n'
@@ -404,11 +412,29 @@ def generate_module_details(
         '      "example": "",\n'
         '      "code": "",\n'
         '      "algorithm": "",\n'
-        '      "resources": ["", ""]\n'
+        '      "resources": ["", "", ""]\n'
         '    }\n'
         '  ]\n'
         '}\n\n'
-        "Use double quotes for all property names and string values. The 'code' field should contain the relevant code snippet for the step, if applicable, otherwise an empty string. The 'algorithm' field should describe the algorithm used in the step, if applicable, otherwise empty string."
+        f"**Field Requirements**:\n"
+        f"- **title**: Exactly match the module’s title ('{module.title}').\n"
+        f"- **description**: Provide a detailed, beginner-friendly overview of the module (3-5 sentences). Expand on the summary to include specific learning objectives, the module’s role in the project, and what the student will achieve by completing it. Mention the 1-week duration and key skills gained.\n"
+        f"- **steps**: An array of objects, one for each step listed above, in the same order and number as provided.\n"
+        f"  - **title**: Exactly match the step’s title from the input (e.g., '{module.steps[0].title}' for the first step).\n"
+        f"  - **explanation**: Provide a comprehensive explanation of the step (5-7 sentences). Break down the step’s purpose, key concepts, and potential challenges in simple language, as if explaining to someone with no prior knowledge. Use analogies to relate concepts to everyday experiences. Explain technical terms (e.g., 'API', 'hashing') in context. Highlight how the step contributes to the module and project. Include an estimated time to complete the step (e.g., '2 hours').\n"
+        f"  - **example**: Describe a detailed, real-world scenario or analogy that illustrates the step’s purpose (3-5 sentences). For example, compare a programming task to a real-life activity (e.g., building a webpage to constructing a house). Ensure the example is practical, relatable, and reinforces the step’s learning objectives.\n"
+        f"  - **code**: If the step involves coding, provide a complete, standalone, and runnable code snippet that the student can directly use. Include detailed comments explaining each major section (e.g., imports, functions, logic). Ensure the code is beginner-friendly, includes basic error handling, and specifies any required dependencies or setup (e.g., 'Save as index.html' or 'Requires Python 3.8+ with requests library'). If the step does not involve coding, use an empty string (\"\"). Aim for clarity and simplicity, avoiding advanced techniques unless necessary.\n"
+        f"  - **algorithm**: If the step involves a process or logic, provide a structured algorithm as numbered steps or pseudocode. Each step should be concise, include preconditions and postconditions, and address edge cases (e.g., 'Handle empty input'). If the step does not involve algorithmic logic, use an empty string (\"\"). Format clearly, e.g., '1. Initialize variable X. 2. Check if X is valid...'\n"
+        f"  - **resources**: Provide exactly three specific, high-quality, beginner-friendly resources (e.g., URLs to tutorials, documentation, or videos). Each resource must include a detailed description (1-2 sentences) explaining its content, relevance to the step, and why it’s suitable for beginners. Prefer reputable sources like W3Schools, MDN Web Docs, or freeCodeCamp. Format as strings, e.g., \"https://www.w3schools.com/html/html_intro.asp - Interactive HTML tutorial with simple examples for beginners\".\n\n"
+        f"**Additional Instructions**:\n"
+        f"- Ensure all fields are populated unless explicitly allowed to be empty (code, algorithm). Empty fields must be \"\" or [] as specified.\n"
+        f"- Use clear, concise, and encouraging language to motivate beginners. Avoid technical jargon unless defined within the explanation.\n"
+        f"- Distribute the module’s tasks across the 1-week duration, ensuring the total estimated time for all steps aligns with {module_total_hours} hours. Include time estimates in each step’s explanation (e.g., 'This step takes approximately 2 hours').\n"
+        f"- Ensure code snippets are complete and include setup instructions (e.g., file names, library installations) in comments. Test mentally that the code runs as described.\n"
+        f"- Curate resources that are freely accessible, reliable, and beginner-oriented, with a mix of formats (e.g., text tutorials, videos, interactive tools).\n"
+        f"- Validate the JSON output for correctness, ensuring no missing commas, brackets, or quotes, and that it parses correctly as a single JSON object.\n"
+        f"- If the step involves a common programming task (e.g., creating a webpage, writing a function), prioritize examples and code that align with standard practices in the field.\n"
+        f"- Reflect the module’s subject area (e.g., programming, web development) based on the title and summary, tailoring content to the most likely context.\n"
     )
 
     # Send to Gemini model
