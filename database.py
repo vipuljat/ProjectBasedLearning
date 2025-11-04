@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import Depends
 
 # MongoDB connection URL (local MongoDB instance)
-MONGODB_URL = "mongodb+srv://vipuljat708:LexZeTwplXiha0nw@clustercoe.lfosaut.mongodb.net/"
+MONGODB_URL = "mongodb://localhost:27017/"
 
 # Client instance to be reused across the app
 client = AsyncIOMotorClient(MONGODB_URL)

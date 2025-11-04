@@ -46,7 +46,7 @@ def generate_project_suggestions(params: StudentParams) -> List[ProjectSuggestio
 
     # Generate content
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model=GEMINI_MODEL,
         contents=prompt
     )
     
@@ -157,7 +157,7 @@ def get_project_details(project_title: str) -> ProjectDetails:
     )
 
     # Generate content
-    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
 
     print("Raw AI Response:\n", response.text)  # Debugging
 
@@ -225,7 +225,7 @@ def get_project_overview(project_title: str) -> Overview:
 
 
     # Generate content
-    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     print("Raw AI Response:\n", response.text)
 
     if not response.text:
@@ -322,7 +322,7 @@ def get_project_modules(project_title: str, total_weeks: int, hours_per_day: int
         f"Return output as a valid JSON array ONLY. Do not include any markdown, commentary, or formatting. No introductory text. No explanation."
     )
 
-    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
 
     if not response.text:
         raise ValueError("No response received from Gemini")
@@ -438,7 +438,7 @@ def generate_module_details(
     )
 
     # Send to Gemini model
-    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     print("Raw AI response:\n", response.text)
 
     if not response.text:
@@ -505,7 +505,7 @@ def get_project_resources(title: str, overview: str) -> dict:
     )
 
     # Generate content
-    response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
 
     print("Raw AI Response:\n", response.text)  # Debugging
 
@@ -587,7 +587,7 @@ def get_diagram_details(project_title: str) -> DiagramDetails:
 
     # Generate content from model (adjust according to your LLM)
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model=GEMINI_MODEL,
         contents=prompt
     )
 
