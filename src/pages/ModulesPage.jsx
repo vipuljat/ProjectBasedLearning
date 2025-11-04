@@ -120,7 +120,7 @@ export default function ModulesPage() {
     };
 
     const handleViewDetails = (detail) => {
-        navigate("/moduleResourcePage", { state: { module: detail, resources } });
+        navigate("/moduleResourcePage", { state: { module: detail, resources , title } });
     };
 
     const handleExploreResources = () => {

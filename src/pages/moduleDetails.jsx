@@ -12,6 +12,7 @@ export default function ModuleDetailPage() {
     const [activeStep, setActiveStep] = useState(initialDay * 3 + initialTask); // Flatten index: each day has 1 task
     const [animateIn, setAnimateIn] = useState(false);
 
+
     useEffect(() => {
         setAnimateIn(true);
     }, []);

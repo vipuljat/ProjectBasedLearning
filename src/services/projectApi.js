@@ -47,15 +47,18 @@ const projectApiBase = createApi({
         }),
 
         getDiagram: builder.mutation({
-            query: ({ module_title, steps }) => ({
+            query: ({ project_title }) => ({
                 url: '/diagrams',
                 method: 'POST',
-                body: { module_title, steps },
-            }),
+                body: { project_title },
+            })
         }),
 
         getStoredDiagrams: builder.query({
-            query: (project_title) => `/diagrams/${encodeURIComponent(project_title)}`,
+            query: (project_title) => ({
+                url: '/diagrams',
+                params: { project_title }, // Send project_title as query parameter
+            }),
         }),
 
         getUserPreferences: builder.query({

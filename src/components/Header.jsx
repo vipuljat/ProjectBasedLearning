@@ -11,7 +11,7 @@ export default function Header() {
                         <div className="bg-[#0095FF] w-5 h-5 rounded-full"></div>
                     </div>
                     {/* Text with animation */}
-                    <span className="text-xl font-extrabold group-hover:text-[#0095FF] transition-all duration-300">ProjectMatch</span>
+                    <span className="text-xl font-extrabold group-hover:text-[#0095FF] transition-all duration-300">Learnovate</span>
                 </Link>
 
                 <nav className="flex items-center gap-8">

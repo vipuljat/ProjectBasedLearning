@@ -7,10 +7,11 @@ import mermaid from "mermaid";
 const COLORS = ["#0095FF", "#00C49F", "#FFBB28", "#FF8042"];
 
 export default function DiagramsPage() {
-    const { project_title } = useParams(); // Get project_title from URL params
+    const { project_title } = location.state || {}; // Get project_title from URL params
     const { data: diagramData, isLoading, isError } = useGetStoredDiagramsQuery(project_title); // Fetch data using query
     const [selectedDiagram, setSelectedDiagram] = useState("UML");
     const [renderError, setRenderError] = useState(null);
+
 
     console.log("diagramData", diagramData);
     console.log("title", project_title);

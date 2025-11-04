@@ -40,21 +40,60 @@ export default function ProjectOverview() {
         }
     };
 
-    if (isOverviewLoading || isModulesLoading || isResourcesLoading || isPreferencesLoading) {
-        return (
-            <div className="bg-[#0C111D] text-[#F2F2F2] min-h-screen flex justify-center items-center">
-                <p>Loading project overview...</p>
+if (isOverviewLoading || isModulesLoading || isResourcesLoading || isPreferencesLoading) {
+    return (
+        <div className="bg-[#0C111D] text-[#F2F2F2] min-h-screen flex justify-center items-center w-screen">
+            <div className="flex flex-col items-center gap-6">
+                {/* Animated Loader */}
+                <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 border-4 border-t-[#0095FF] border-[#2A2F3E] rounded-full animate-spin"></div>
+                    <div className="absolute inset-2 border-4 border-t-[#4AB8FF] border-[#1E293B] rounded-full animate-spin-slow"></div>
+                </div>
+                {/* Loading Text with Pulse Effect */}
+                <p className="text-lg font-medium text-[#F2F2F2]/90 animate-pulse">
+                    Loading project overview...
+                </p>
             </div>
-        );
-    }
+        </div>
+    );
+}
 
-    if (isOverviewError || isResourcesError || isPreferencesError || !projectOverview || !userPreferences) {
-        return (
-            <div className="bg-[#0C111D] text-[#F2F2F2] min-h-screen flex justify-center items-center">
-                <p>Failed to load project overview or user preferences.</p>
+if (isOverviewError || isResourcesError || isPreferencesError || !projectOverview || !userPreferences) {
+    return (
+        <div className="bg-[#0C111D] text-[#F2F2F2] min-h-screen flex justify-center items-center w-screen">
+            <div className="flex flex-col items-center gap-6">
+                {/* Error Icon */}
+                <div className="w-16 h-16 bg-[#1E293B] rounded-full flex items-center justify-center">
+                    <svg
+                        className="w-8 h-8 text-[#FF4A4A]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                </div>
+                {/* Error Message */}
+                <p className="text-lg font-medium text-[#F2F2F2]/90 max-w-md text-center">
+                    Failed to load project overview or user preferences. Please try again later.
+                </p>
+                {/* Retry Button */}
+                <button
+                    onClick={() => window.location.reload()}
+                    className="bg-[#0095FF] hover:bg-[#0095FF]/90 text-[#F2F2F2] font-medium py-2 px-4 rounded-md transition-colors"
+                >
+                    Retry
+                </button>
             </div>
-        );
-    }
+        </div>
+    );
+}
 
     // Use user preferences to override hardcoded values
     const totalWeeks = userPreferences.totalWeeks || Math.ceil(projectOverview.estimated_time.total_estimated_days / 7);

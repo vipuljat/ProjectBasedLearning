@@ -34,6 +34,7 @@ export default function RecommendedProjects({ onSelectProject }) {
             <h2 className="text-xl font-bold mb-4 ">Recommended Projects</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            
                 {projects.map((project) => (
                     <div key={project.id} className="bg-[#0f172a] rounded-lg overflow-hidden">
                         <div className="p-4">
